@@ -58,17 +58,45 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 
-// ── Colors ───────────────────────────────────────────────
+// ── Theme colors ─────────────────────────────────────────
 
-val BgColor      = Color(0xFF0A0F0D)
-val SurfaceColor = Color(0xFF111A16)
-val RaisedColor  = Color(0xFF1A2720)
-val BorderColor  = Color(0xFF2A3D35)
-val AccentColor  = Color(0xFF00D9A3)
-val AccentDark   = Color(0xFF00916B)
-val TextColor    = Color(0xFFE0F5EE)
-val MutedColor   = Color(0xFF6A8A7A)
-val FieldBg      = Color(0xFF162019)
+data class AppColors(
+    val bgColor: Color,
+    val surfaceColor: Color,
+    val raisedColor: Color,
+    val borderColor: Color,
+    val accentColor: Color,
+    val accentDark: Color,
+    val textColor: Color,
+    val mutedColor: Color,
+    val fieldBg: Color,
+)
+
+val darkColors = AppColors(
+    bgColor      = Color(0xFF0A0F0D),
+    surfaceColor = Color(0xFF111A16),
+    raisedColor  = Color(0xFF1A2720),
+    borderColor  = Color(0xFF2A3D35),
+    accentColor  = Color(0xFF00D9A3),
+    accentDark   = Color(0xFF00916B),
+    textColor    = Color(0xFFE0F5EE),
+    mutedColor   = Color(0xFF6A8A7A),
+    fieldBg      = Color(0xFF162019),
+)
+
+val lightColors = AppColors(
+    bgColor      = Color(0xFFF0FBF7),
+    surfaceColor = Color(0xFFFFFFFF),
+    raisedColor  = Color(0xFFE0F5EE),
+    borderColor  = Color(0xFFB0D9C8),
+    accentColor  = Color(0xFF00916B),
+    accentDark   = Color(0xFF006B4F),
+    textColor    = Color(0xFF0A2E22),
+    mutedColor   = Color(0xFF3D6B58),
+    fieldBg      = Color(0xFFF5FDF9),
+)
+
+val LocalColors = compositionLocalOf { darkColors }
 
 // ── QR types ─────────────────────────────────────────────
 
@@ -158,32 +186,55 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { AppTheme { QrScreen() } }
+        val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        val savedDark = prefs.getBoolean("is_dark", false)
+        setContent { QrApp(initialDark = savedDark) }
     }
 }
 
 @Composable
-fun AppTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = darkColorScheme(
-            background   = BgColor,
-            surface      = SurfaceColor,
-            primary      = AccentColor,
-            onPrimary    = Color(0xFF0A0F0D),
-            onBackground = TextColor,
-            onSurface    = TextColor,
-        ),
-        content = content,
-    )
+fun QrApp(initialDark: Boolean) {
+    val context = LocalContext.current
+    var isDark by remember { mutableStateOf(initialDark) }
+    val colors = if (isDark) darkColors else lightColors
+
+    fun toggleTheme() {
+        isDark = !isDark
+        context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+            .edit().putBoolean("is_dark", isDark).apply()
+    }
+
+    CompositionLocalProvider(LocalColors provides colors) {
+        QrScreen(isDark = isDark, onToggleTheme = ::toggleTheme)
+    }
+}
+
+// ── Theme toggle ─────────────────────────────────────────
+
+@Composable
+fun ThemeToggle(isDark: Boolean, onToggle: () -> Unit) {
+    val c = LocalColors.current
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(c.raisedColor)
+            .border(1.dp, c.borderColor, CircleShape)
+            .clickable(onClick = onToggle),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(if (isDark) "☀" else "☾", fontSize = 18.sp)
+    }
 }
 
 // ── Screen ───────────────────────────────────────────────
 
 @Composable
-fun QrScreen() {
+fun QrScreen(isDark: Boolean, onToggleTheme: () -> Unit) {
+    val c = LocalColors.current
+
     var selectedType by remember { mutableStateOf(QrType.URL) }
 
-    // Per-type inputs
     var url      by remember { mutableStateOf("") }
     var text     by remember { mutableStateOf("") }
     var email    by remember { mutableStateOf("") }
@@ -200,10 +251,8 @@ fun QrScreen() {
     val haptic  = LocalHapticFeedback.current
     val context = LocalContext.current
 
-    // Build content string from current type + inputs
     val content = buildQrContent(selectedType, url, text, email, phone, ssid, wifiPass, wifiSec)
 
-    // Auto-generate with debounce whenever content changes
     LaunchedEffect(content) {
         delay(350)
         if (content.isNotBlank()) {
@@ -237,7 +286,7 @@ fun QrScreen() {
     }
 
     Scaffold(
-        containerColor = BgColor,
+        containerColor = c.bgColor,
         contentWindowInsets = WindowInsets.safeDrawing,
     ) { padding ->
         Column(
@@ -251,11 +300,18 @@ fun QrScreen() {
         ) {
 
             // ── Header ──────────────────────────────────
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("QR Code", fontSize = 36.sp, fontWeight = FontWeight.Black, color = AccentColor, letterSpacing = 1.sp)
-                Text("Generator", fontSize = 36.sp, fontWeight = FontWeight.Black, color = TextColor, letterSpacing = 1.sp)
-                Spacer(Modifier.height(2.dp))
-                Text("Create  ·  Save  ·  Share", fontSize = 12.sp, color = MutedColor, letterSpacing = 2.sp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("QR Code", fontSize = 36.sp, fontWeight = FontWeight.Black, color = c.accentColor, letterSpacing = 1.sp)
+                    Text("Generator", fontSize = 36.sp, fontWeight = FontWeight.Black, color = c.textColor, letterSpacing = 1.sp)
+                    Spacer(Modifier.height(2.dp))
+                    Text("Create  ·  Save  ·  Share", fontSize = 12.sp, color = c.mutedColor, letterSpacing = 2.sp)
+                }
+                ThemeToggle(isDark = isDark, onToggle = onToggleTheme)
             }
 
             // ── Type selector ────────────────────────────
@@ -268,8 +324,8 @@ fun QrScreen() {
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (active) AccentColor.copy(alpha = 0.15f) else RaisedColor)
-                            .border(1.5.dp, if (active) AccentColor else BorderColor, RoundedCornerShape(12.dp))
+                            .background(if (active) c.accentColor.copy(alpha = 0.15f) else c.raisedColor)
+                            .border(1.5.dp, if (active) c.accentColor else c.borderColor, RoundedCornerShape(12.dp))
                             .clickable {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 selectedType = type
@@ -283,7 +339,7 @@ fun QrScreen() {
                             text = type.label,
                             fontSize = 13.sp,
                             fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
-                            color = if (active) AccentColor else MutedColor,
+                            color = if (active) c.accentColor else c.mutedColor,
                         )
                     }
                 }
@@ -299,8 +355,8 @@ fun QrScreen() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(SurfaceColor)
-                        .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
+                        .background(c.surfaceColor)
+                        .border(1.dp, c.borderColor, RoundedCornerShape(16.dp))
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
@@ -327,23 +383,22 @@ fun QrScreen() {
                             QrTextField(value = wifiPass, onChange = { wifiPass = it },
                                 label = "Password", hint = "••••••••",
                                 isPassword = true)
-                            // Security type selector
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text("Security", fontSize = 12.sp, color = MutedColor, letterSpacing = 1.sp)
+                                Text("Security", fontSize = 12.sp, color = c.mutedColor, letterSpacing = 1.sp)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     listOf("WPA", "WEP", "None").forEach { sec ->
                                         val sel = wifiSec == sec
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(8.dp))
-                                                .background(if (sel) AccentColor.copy(0.15f) else RaisedColor)
-                                                .border(1.dp, if (sel) AccentColor else BorderColor, RoundedCornerShape(8.dp))
+                                                .background(if (sel) c.accentColor.copy(0.15f) else c.raisedColor)
+                                                .border(1.dp, if (sel) c.accentColor else c.borderColor, RoundedCornerShape(8.dp))
                                                 .clickable { wifiSec = sec }
                                                 .padding(horizontal = 16.dp, vertical = 8.dp),
                                         ) {
                                             Text(sec, fontSize = 13.sp,
                                                 fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
-                                                color = if (sel) AccentColor else MutedColor)
+                                                color = if (sel) c.accentColor else c.mutedColor)
                                         }
                                     }
                                 }
@@ -358,8 +413,8 @@ fun QrScreen() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(20.dp))
-                    .background(SurfaceColor)
-                    .border(1.dp, BorderColor, RoundedCornerShape(20.dp))
+                    .background(c.surfaceColor)
+                    .border(1.dp, c.borderColor, RoundedCornerShape(20.dp))
                     .padding(24.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -373,7 +428,6 @@ fun QrScreen() {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            // White padding around QR for scanners
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(12.dp))
@@ -390,7 +444,7 @@ fun QrScreen() {
                             Text(
                                 text = content.take(50) + if (content.length > 50) "…" else "",
                                 fontSize = 11.sp,
-                                color = MutedColor,
+                                color = c.mutedColor,
                                 letterSpacing = 0.5.sp,
                             )
                         }
@@ -401,8 +455,8 @@ fun QrScreen() {
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
                             Text("⬜", fontSize = 48.sp)
-                            Text("QR preview will appear here", fontSize = 13.sp, color = MutedColor)
-                            Text("Fill in the fields above", fontSize = 11.sp, color = MutedColor.copy(0.6f))
+                            Text("QR preview will appear here", fontSize = 13.sp, color = c.mutedColor)
+                            Text("Fill in the fields above", fontSize = 11.sp, color = c.mutedColor.copy(0.6f))
                         }
                     }
                 }
@@ -413,16 +467,15 @@ fun QrScreen() {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                // Save button
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(14.dp))
                         .background(
                             if (qrBitmap != null)
-                                Brush.linearGradient(listOf(AccentDark, AccentColor))
+                                Brush.linearGradient(listOf(c.accentDark, c.accentColor))
                             else
-                                Brush.linearGradient(listOf(RaisedColor, RaisedColor))
+                                Brush.linearGradient(listOf(c.raisedColor, c.raisedColor))
                         )
                         .clickable(enabled = qrBitmap != null) { doSave() }
                         .padding(vertical = 16.dp),
@@ -433,23 +486,22 @@ fun QrScreen() {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(if (showSaved) "✓" else "↓", fontSize = 16.sp,
-                            color = if (qrBitmap != null) Color(0xFF0A0F0D) else MutedColor)
+                            color = if (qrBitmap != null) c.bgColor else c.mutedColor)
                         Text(
                             text = if (showSaved) "Saved!" else "Save",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (qrBitmap != null) Color(0xFF0A0F0D) else MutedColor,
+                            color = if (qrBitmap != null) c.bgColor else c.mutedColor,
                         )
                     }
                 }
 
-                // Share button
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(if (qrBitmap != null) RaisedColor else RaisedColor.copy(0.5f))
-                        .border(1.dp, if (qrBitmap != null) AccentColor else BorderColor, RoundedCornerShape(14.dp))
+                        .background(if (qrBitmap != null) c.raisedColor else c.raisedColor.copy(0.5f))
+                        .border(1.dp, if (qrBitmap != null) c.accentColor else c.borderColor, RoundedCornerShape(14.dp))
                         .clickable(enabled = qrBitmap != null) { doShare() }
                         .padding(vertical = 16.dp),
                     contentAlignment = Alignment.Center,
@@ -458,18 +510,17 @@ fun QrScreen() {
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("↗", fontSize = 16.sp, color = if (qrBitmap != null) AccentColor else MutedColor)
+                        Text("↗", fontSize = 16.sp, color = if (qrBitmap != null) c.accentColor else c.mutedColor)
                         Text(
                             text = "Share",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (qrBitmap != null) AccentColor else MutedColor,
+                            color = if (qrBitmap != null) c.accentColor else c.mutedColor,
                         )
                     }
                 }
             }
 
-            // Error snackbar
             AnimatedVisibility(visible = showError) {
                 Box(
                     modifier = Modifier
@@ -498,24 +549,25 @@ fun QrTextField(
     singleLine: Boolean = true,
     isPassword: Boolean = false,
 ) {
+    val c = LocalColors.current
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(label, fontSize = 12.sp, color = MutedColor, letterSpacing = 1.sp)
+        Text(label, fontSize = 12.sp, color = c.mutedColor, letterSpacing = 1.sp)
         TextField(
             value = value,
             onValueChange = onChange,
             modifier = Modifier.fillMaxWidth(),
             singleLine = singleLine,
-            placeholder = { Text(hint, color = MutedColor.copy(0.5f), fontSize = 14.sp) },
+            placeholder = { Text(hint, color = c.mutedColor.copy(0.5f), fontSize = 14.sp) },
             visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
             keyboardOptions = KeyboardOptions(keyboardType = keyboard),
             colors = TextFieldDefaults.colors(
-                focusedContainerColor   = FieldBg,
-                unfocusedContainerColor = FieldBg,
-                focusedIndicatorColor   = AccentColor,
-                unfocusedIndicatorColor = BorderColor,
-                focusedTextColor        = TextColor,
-                unfocusedTextColor      = TextColor,
-                cursorColor             = AccentColor,
+                focusedContainerColor   = c.fieldBg,
+                unfocusedContainerColor = c.fieldBg,
+                focusedIndicatorColor   = c.accentColor,
+                unfocusedIndicatorColor = c.borderColor,
+                focusedTextColor        = c.textColor,
+                unfocusedTextColor      = c.textColor,
+                cursorColor             = c.accentColor,
             ),
             shape = RoundedCornerShape(10.dp),
         )
