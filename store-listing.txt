@@ -1,0 +1,62 @@
+=====================================
+QR CODE GENERATOR — PLAY STORE LISTING
+=====================================
+
+APP TITLE (50 chars max)
+------------------------
+QR Code Generator — Create & Share
+
+
+SHORT DESCRIPTION (80 chars max)
+---------------------------------
+Generate QR codes for URLs, text, email, phone, and WiFi instantly.
+
+
+FULL DESCRIPTION (4000 chars max)
+----------------------------------
+QR Code Generator is the cleanest, fastest QR code creator on Android. Generate a QR code for anything in seconds — no sign-up, no ads, no internet required.
+
+🔗 5 QR CODE TYPES
+• URL — encode any website link
+• Text — encode any plain text message
+• Email — tap-to-open email in any mail app
+• Phone — dial a number directly from a scan
+• WiFi — share your network instantly without typing a password
+
+⚡ REAL-TIME PREVIEW
+Your QR code updates live as you type. No need to press generate — it's always ready.
+
+💾 SAVE TO GALLERY
+Save your QR code as a high-resolution PNG directly to your Photos app with a single tap.
+
+📤 SHARE ANYWHERE
+Share your QR code to any app — WhatsApp, iMessage, email, Instagram — using the standard Android share sheet.
+
+🌙☀ DARK & LIGHT MODE
+A deep teal dark mode and a crisp light mode. Your preference is saved automatically.
+
+✅ 100% OFFLINE
+QR codes are generated entirely on-device. No servers, no tracking, no data collection.
+
+PERFECT FOR:
+• Sharing your website or portfolio
+• Connecting guests to your WiFi instantly
+• Sending contact info without typing
+• Marketers and small business owners
+
+No ads. No permissions except storage (only used when saving to gallery).
+
+
+KEYWORDS / TAGS
+---------------
+QR code generator, QR maker, create QR code, QR code scanner, WiFi QR, URL QR code, barcode generator, offline QR
+
+
+CATEGORY
+--------
+Tools
+
+
+CONTENT RATING
+--------------
+Everyone
